@@ -1,0 +1,42 @@
+[
+    {
+        "merged": "/Users/nolan/.gradle/daemon/9.0-milestone-1/com.example.timersapp-debug-31:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "/Users/nolan/.gradle/daemon/9.0-milestone-1/com.example.timersapp-main-33:/mipmap-anydpi-v26/ic_launcher.xml"
+    },
+    {
+        "merged": "/Users/nolan/.gradle/daemon/9.0-milestone-1/com.example.timersapp-debug-31:/xml_backup_rules.xml.flat",
+        "source": "/Users/nolan/.gradle/daemon/9.0-milestone-1/com.example.timersapp-main-33:/xml/backup_rules.xml"
+    },
+    {
+        "merged": "/Users/nolan/.gradle/daemon/9.0-milestone-1/com.example.timersapp-debug-31:/layout_dialog_add_timer.xml.flat",
+        "source": "/Users/nolan/.gradle/daemon/9.0-milestone-1/com.example.timersapp-main-33:/layout/dialog_add_timer.xml"
+    },
+    {
+        "merged": "/Users/nolan/.gradle/daemon/9.0-milestone-1/com.example.timersapp-debug-31:/layout_activity_main.xml.flat",
+        "source": "/Users/nolan/.gradle/daemon/9.0-milestone-1/com.example.timersapp-main-33:/layout/activity_main.xml"
+    },
+    {
+        "merged": "com.example.timersapp-debug-31:/layout_item_timer.xml.flat",
+        "source": "com.example.timersapp-main-33:/layout/item_timer.xml"
+    },
+    {
+        "merged": "/Users/nolan/.gradle/daemon/9.0-milestone-1/com.example.timersapp-debug-31:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "/Users/nolan/.gradle/daemon/9.0-milestone-1/com.example.timersapp-main-33:/mipmap-anydpi-v26/ic_launcher_round.xml"
+    },
+    {
+        "merged": "/Users/nolan/.gradle/daemon/9.0-milestone-1/com.example.timersapp-debug-31:/drawable_ic_launcher_foreground.xml.flat",
+        "source": "/Users/nolan/.gradle/daemon/9.0-milestone-1/com.example.timersapp-main-33:/drawable/ic_launcher_foreground.xml"
+    },
+    {
+        "merged": "/Users/nolan/.gradle/daemon/9.0-milestone-1/com.example.timersapp-debug-31:/xml_data_extraction_rules.xml.flat",
+        "source": "/Users/nolan/.gradle/daemon/9.0-milestone-1/com.example.timersapp-main-33:/xml/data_extraction_rules.xml"
+    },
+    {
+        "merged": "/Users/nolan/.gradle/daemon/9.0-milestone-1/com.example.timersapp-debug-31:/layout_item_timer.xml.flat",
+        "source": "/Users/nolan/.gradle/daemon/9.0-milestone-1/com.example.timersapp-main-33:/layout/item_timer.xml"
+    },
+    {
+        "merged": "/Users/nolan/.gradle/daemon/9.0-milestone-1/com.example.timersapp-debug-31:/drawable_ic_launcher_background.xml.flat",
+        "source": "/Users/nolan/.gradle/daemon/9.0-milestone-1/com.example.timersapp-main-33:/drawable/ic_launcher_background.xml"
+    }
+]

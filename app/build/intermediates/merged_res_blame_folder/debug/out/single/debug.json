@@ -1,0 +1,22 @@
+[
+    {
+        "merged": "com.example.timersapp-merged_res-31:/layout_dialog_add_timer.xml.flat",
+        "source": "com.example.timersapp-main-33:/layout/dialog_add_timer.xml"
+    },
+    {
+        "merged": "com.example.timersapp-merged_res-31:/xml_data_extraction_rules.xml.flat",
+        "source": "com.example.timersapp-main-33:/xml/data_extraction_rules.xml"
+    },
+    {
+        "merged": "com.example.timersapp-merged_res-31:/layout_activity_main.xml.flat",
+        "source": "com.example.timersapp-main-33:/layout/activity_main.xml"
+    },
+    {
+        "merged": "com.example.timersapp-merged_res-31:/layout_item_timer.xml.flat",
+        "source": "com.example.timersapp-main-33:/layout/item_timer.xml"
+    },
+    {
+        "merged": "com.example.timersapp-merged_res-31:/xml_backup_rules.xml.flat",
+        "source": "com.example.timersapp-main-33:/xml/backup_rules.xml"
+    }
+]

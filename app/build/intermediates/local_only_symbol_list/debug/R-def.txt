@@ -1,0 +1,36 @@
+R_DEF: Internal format may change without notice
+local
+color black
+color purple_500
+color purple_700
+color teal_200
+color teal_700
+color white
+id deleteButton
+id editDurationMin
+id editDurationSec
+id editTimerName
+id fabAddTimer
+id recyclerView
+id resetButton
+id startPauseButton
+id timerName
+id timerTime
+layout activity_main
+layout dialog_add_timer
+layout item_timer
+string add_timer
+string app_name
+string cancel
+string create
+string default_timer_text
+string delete
+string duration_hint_min
+string duration_hint_sec
+string pause
+string reset
+string start
+string timer_name_hint
+style Theme.TimersApp
+xml backup_rules
+xml data_extraction_rules
