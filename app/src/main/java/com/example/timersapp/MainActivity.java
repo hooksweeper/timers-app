@@ -1,13 +1,18 @@
 package com.example.timersapp;
 
+import android.app.AlarmManager;
+import android.app.PendingIntent;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.Settings;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -42,6 +47,8 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
     private static final String PREFS_NAME = "TimerPrefs";
     private static final String KEY_TIMERS = "saved_timers";
     
+    private AlarmManager alarmManager;
+    
     // For selecting sound in dialog
     private Uri tempSelectedSoundUri;
     private TextView tempSoundNameView;
@@ -71,6 +78,9 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        
+        alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        checkExactAlarmPermission();
 
         RecyclerView recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -83,34 +93,113 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
 
         loadTimers();
         startGlobalTicker();
+        
+        handleIntent(getIntent());
+    }
+    
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleIntent(intent);
+    }
+    
+    private void handleIntent(Intent intent) {
+        if (TimerExpiredReceiver.ACTION_TIMER_EXPIRED.equals(intent.getAction())) {
+            String timerId = intent.getStringExtra(TimerExpiredReceiver.EXTRA_TIMER_ID);
+            if (timerId != null) {
+                for (int i = 0; i < timers.size(); i++) {
+                    TimerModel t = timers.get(i);
+                    if (t.getId().equals(timerId)) {
+                        t.setEndTime(0);
+                        t.setFiring(true);
+                        playAlarmSound(t.getSoundUri());
+                        adapter.notifyItemChanged(i);
+                        saveTimers();
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    
+    private void checkExactAlarmPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (!alarmManager.canScheduleExactAlarms()) {
+                Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
+                startActivity(intent);
+            }
+        }
     }
 
     private void startGlobalTicker() {
         tickerRunnable = new Runnable() {
             @Override
             public void run() {
-                boolean anyChanged = false;
-                for (TimerModel t : timers) {
-                    if (t.isRunning() && t.getRemainingSeconds() > 0) {
-                        t.setRemainingSeconds(t.getRemainingSeconds() - 1);
-                        if (t.getRemainingSeconds() <= 0) {
-                            t.setRunning(false);
-                            t.setFiring(true);
-                            playAlarmSound(t.getSoundUri());
+                for (int i = 0; i < timers.size(); i++) {
+                    TimerModel t = timers.get(i);
+                    if (t.isRunning()) {
+                        long remaining = t.getRemainingSeconds();
+                        if (remaining <= 0) {
+                            // Handled by Alarm/Receiver, but safe fallback for UI while open
+                            if (!t.isFiring()) {
+                                t.setEndTime(0);
+                                t.setFiring(true);
+                                playAlarmSound(t.getSoundUri());
+                                saveTimers();
+                            }
                         }
-                        anyChanged = true;
+                        adapter.notifyItemChanged(i);
                     }
                 }
-                
-                if (anyChanged) {
-                    adapter.notifyDataSetChanged();
-                    saveTimers();
-                }
-                
                 tickerHandler.postDelayed(this, 1000);
             }
         };
         tickerHandler.post(tickerRunnable);
+    }
+
+    private void scheduleAlarm(TimerModel timer) {
+        if (alarmManager != null && timer.isRunning()) {
+            Intent intent = new Intent(this, TimerExpiredReceiver.class);
+            intent.setAction(TimerExpiredReceiver.ACTION_TIMER_EXPIRED);
+            intent.putExtra(TimerExpiredReceiver.EXTRA_TIMER_ID, timer.getId());
+            
+            PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                    this, 
+                    timer.getId().hashCode(), 
+                    intent, 
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
+            
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (alarmManager.canScheduleExactAlarms()) {
+                    alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, timer.getEndTime(), pendingIntent);
+                } else {
+                    alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, timer.getEndTime(), pendingIntent);
+                }
+            } else {
+                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, timer.getEndTime(), pendingIntent);
+            }
+        }
+    }
+
+    private void cancelAlarm(TimerModel timer) {
+        if (alarmManager != null) {
+            Intent intent = new Intent(this, TimerExpiredReceiver.class);
+            intent.setAction(TimerExpiredReceiver.ACTION_TIMER_EXPIRED);
+            
+            PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                    this, 
+                    timer.getId().hashCode(), 
+                    intent, 
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_NO_CREATE
+            );
+            
+            if (pendingIntent != null) {
+                alarmManager.cancel(pendingIntent);
+                pendingIntent.cancel();
+            }
+        }
     }
 
     private void playAlarmSound(String soundUriStr) {
@@ -213,7 +302,6 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
 
                     TimerModel newTimer = new TimerModel(UUID.randomUUID().toString(), name, totalSec, uriString);
                     timers.add(newTimer);
-                    adapter.setTimers(timers); // Update adapter reference if needed or notify
                     adapter.notifyItemInserted(timers.size() - 1);
                     saveTimers();
                 })
@@ -236,7 +324,10 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
                 // Ensure running state is reset on app launch to avoid "running in background" confusion for this simple app
                 // Or we could keep them running if we used timestamps.
                 // For simplicity: pause all on load.
-                for (TimerModel t : timers) t.setRunning(false); 
+                for (TimerModel t : timers) {
+                    t.setEndTime(0);
+                    t.setFiring(false);
+                } 
             }
         }
         adapter.setTimers(timers);
@@ -253,6 +344,7 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
 
     @Override
     public void onDelete(TimerModel timer) {
+        cancelAlarm(timer);
         int pos = timers.indexOf(timer);
         if (pos != -1) {
             timers.remove(pos);
@@ -263,34 +355,66 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
 
     @Override
     public void onStopAlarm(TimerModel timer) {
+        cancelAlarm(timer);
         if (currentRingtone != null && currentRingtone.isPlaying()) {
             currentRingtone.stop();
         }
-        timer.setFiring(false);
-        timer.setRemainingSeconds(timer.getDurationSeconds());
-        adapter.notifyDataSetChanged();
-        saveTimers();
+        int index = timers.indexOf(timer);
+        if (index != -1) {
+            timer.setFiring(false);
+            timer.setRemainingSeconds(timer.getDurationSeconds());
+            timer.setEndTime(0);
+            adapter.notifyItemChanged(index);
+            saveTimers();
+        }
     }
 
     @Override
     public void onReset(TimerModel timer) {
-        timer.setRunning(false);
-        timer.setFiring(false);
-        timer.setRemainingSeconds(timer.getDurationSeconds());
-        adapter.notifyDataSetChanged();
-        saveTimers();
+        cancelAlarm(timer);
+        int index = timers.indexOf(timer);
+        if (index != -1) {
+            timer.setEndTime(0);
+            timer.setFiring(false);
+            timer.setRemainingSeconds(timer.getDurationSeconds());
+            adapter.notifyItemChanged(index);
+            saveTimers();
+        }
     }
 
     @Override
-    public void onTimerStateChanged() {
-        adapter.notifyDataSetChanged();
+    public void onToggleTimer(TimerModel timer) {
+        int index = timers.indexOf(timer);
+        if (index == -1) return;
+
+        if (timer.isRunning()) {
+            // Pause
+            long remaining = timer.getRemainingSeconds();
+            timer.setRemainingSeconds(remaining);
+            timer.setEndTime(0);
+            cancelAlarm(timer);
+        } else {
+            // Start
+            long endTime = System.currentTimeMillis() + (timer.getRemainingSeconds() * 1000);
+            timer.setEndTime(endTime);
+            scheduleAlarm(timer);
+        }
+        
+        adapter.notifyItemChanged(index);
         saveTimers();
     }
     
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        tickerHandler.removeCallbacks(tickerRunnable);
+        tickerHandler.removeCallbacksAndMessages(null);
+        previewHandler.removeCallbacksAndMessages(null);
+        if (currentRingtone != null && currentRingtone.isPlaying()) {
+            currentRingtone.stop();
+        }
+        if (previewRingtone != null && previewRingtone.isPlaying()) {
+            previewRingtone.stop();
+        }
         if (adapter != null) adapter.cleanup();
     }
 }

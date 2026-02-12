@@ -23,7 +23,7 @@ public class TimerAdapter extends RecyclerView.Adapter<TimerAdapter.TimerViewHol
         void onDelete(TimerModel timer);
         void onStopAlarm(TimerModel timer);
         void onReset(TimerModel timer);
-        void onTimerStateChanged(); // To trigger save
+        void onToggleTimer(TimerModel timer);
     }
 
     public TimerAdapter(OnTimerActionListener listener) {
@@ -31,8 +31,10 @@ public class TimerAdapter extends RecyclerView.Adapter<TimerAdapter.TimerViewHol
     }
 
     public void setTimers(List<TimerModel> newTimers) {
-        this.timers = newTimers;
-        notifyDataSetChanged();
+        if (this.timers != newTimers) {
+            this.timers = newTimers;
+            notifyDataSetChanged();
+        }
     }
     
     public List<TimerModel> getTimers() {
@@ -104,9 +106,7 @@ public class TimerAdapter extends RecyclerView.Adapter<TimerAdapter.TimerViewHol
             startPauseButton.setEnabled(timer.getRemainingSeconds() > 0);
 
             startPauseButton.setOnClickListener(v -> {
-                timer.setRunning(!timer.isRunning());
-                notifyItemChanged(getAdapterPosition());
-                listener.onTimerStateChanged();
+                listener.onToggleTimer(timer);
             });
 
             stopAlarmButton.setOnClickListener(v -> {
