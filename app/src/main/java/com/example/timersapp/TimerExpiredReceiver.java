@@ -4,6 +4,7 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.media.RingtoneManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -35,8 +36,9 @@ public class TimerExpiredReceiver extends BroadcastReceiver {
                     .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
                     .setContentTitle("Timer Finished!")
                     .setContentText("Tap to stop the alarm.")
-                    .setPriority(NotificationCompat.PRIORITY_HIGH)
+                    .setPriority(NotificationCompat.PRIORITY_MAX)
                     .setCategory(NotificationCompat.CATEGORY_ALARM)
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM))
                     .setFullScreenIntent(fullScreenPendingIntent, true) // Key for lockscreen
                     .setAutoCancel(true)
                     .setOngoing(true);

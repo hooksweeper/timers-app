@@ -169,6 +169,7 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
             channel.setDescription("Shows active countdown timers and alarms");
             channel.setShowBadge(true);
             channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+            channel.setBypassDnd(true);
             notificationManager.createNotificationChannel(channel);
         }
     }
@@ -310,6 +311,12 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
             }
 
             currentRingtone = RingtoneManager.getRingtone(getApplicationContext(), notification);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                currentRingtone.setAudioAttributes(new android.media.AudioAttributes.Builder()
+                        .setUsage(android.media.AudioAttributes.USAGE_ALARM)
+                        .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build());
+            }
             currentRingtone.play();
         } catch (Exception e) {
             e.printStackTrace();
