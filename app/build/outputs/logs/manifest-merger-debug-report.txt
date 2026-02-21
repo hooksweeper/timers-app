@@ -1,9 +1,9 @@
 -- Merging decision tree log ---
 manifest
-ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:2:1-25:12
-INJECTED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:2:1-25:12
-INJECTED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:2:1-25:12
-INJECTED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:2:1-25:12
+ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:2:1-37:12
+INJECTED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:2:1-37:12
+INJECTED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:2:1-37:12
+INJECTED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:2:1-37:12
 MERGED from [com.google.android.material:material:1.11.0] /Users/nolan/.gradle/caches/9.0-milestone-1/transforms/91aeebf93bbc85abf5317b7c8304cd8e/transformed/material-1.11.0/AndroidManifest.xml:17:1-24:12
 MERGED from [androidx.constraintlayout:constraintlayout:2.1.4] /Users/nolan/.gradle/caches/9.0-milestone-1/transforms/9d76f98c3eb63692ab5b302a34cd371d/transformed/constraintlayout-2.1.4/AndroidManifest.xml:2:1-11:12
 MERGED from [androidx.appcompat:appcompat-resources:1.6.1] /Users/nolan/.gradle/caches/9.0-milestone-1/transforms/3fc87808e56b113927284c8289861976/transformed/jetified-appcompat-resources-1.6.1/AndroidManifest.xml:17:1-22:12
@@ -55,9 +55,21 @@ MERGED from [androidx.annotation:annotation-experimental:1.3.0] /Users/nolan/.gr
 		INJECTED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml
 	xmlns:android
 		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:2:11-69
+uses-permission#android.permission.SCHEDULE_EXACT_ALARM
+ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:5:5-79
+	android:name
+		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:5:22-76
+uses-permission#android.permission.WAKE_LOCK
+ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:6:5-68
+	android:name
+		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:6:22-65
+uses-permission#android.permission.POST_NOTIFICATIONS
+ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:7:5-76
+	android:name
+		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:7:22-74
 application
-ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:5:5-23:19
-INJECTED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:5:5-23:19
+ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:9:5-35:19
+INJECTED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:9:5-35:19
 MERGED from [com.google.android.material:material:1.11.0] /Users/nolan/.gradle/caches/9.0-milestone-1/transforms/91aeebf93bbc85abf5317b7c8304cd8e/transformed/material-1.11.0/AndroidManifest.xml:22:5-20
 MERGED from [com.google.android.material:material:1.11.0] /Users/nolan/.gradle/caches/9.0-milestone-1/transforms/91aeebf93bbc85abf5317b7c8304cd8e/transformed/material-1.11.0/AndroidManifest.xml:22:5-20
 MERGED from [androidx.constraintlayout:constraintlayout:2.1.4] /Users/nolan/.gradle/caches/9.0-milestone-1/transforms/9d76f98c3eb63692ab5b302a34cd371d/transformed/constraintlayout-2.1.4/AndroidManifest.xml:9:5-20
@@ -79,39 +91,53 @@ MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/nolan/.gradle/caches
 	android:appComponentFactory
 		ADDED from [androidx.core:core:1.9.0] /Users/nolan/.gradle/caches/9.0-milestone-1/transforms/b15544bd29ec5d9889c5ffdee464736f/transformed/core-1.9.0/AndroidManifest.xml:28:18-86
 	android:supportsRtl
-		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:12:9-35
+		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:16:9-35
 	android:label
-		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:10:9-41
+		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:14:9-41
 	android:fullBackupContent
-		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:8:9-54
+		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:12:9-54
 	android:roundIcon
-		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:11:9-54
+		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:15:9-54
 	tools:targetApi
-		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:14:9-29
+		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:18:9-29
 	android:icon
-		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:9:9-43
+		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:13:9-43
 	android:allowBackup
-		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:6:9-35
+		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:10:9-35
 	android:theme
-		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:13:9-47
+		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:17:9-47
 	android:dataExtractionRules
-		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:7:9-65
+		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:11:9-65
 activity#com.example.timersapp.MainActivity
-ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:15:9-22:20
+ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:19:9-27:20
+	android:launchMode
+		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:22:13-43
 	android:exported
-		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:17:13-36
+		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:21:13-36
 	android:name
-		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:16:13-41
+		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:20:13-41
 intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
-ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:18:13-21:29
+ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:23:13-26:29
 action#android.intent.action.MAIN
-ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:19:17-69
+ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:24:17-69
 	android:name
-		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:19:25-66
+		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:24:25-66
 category#android.intent.category.LAUNCHER
-ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:20:17-77
+ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:25:17-77
 	android:name
-		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:20:27-74
+		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:25:27-74
+receiver#com.example.timersapp.TimerExpiredReceiver
+ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:29:9-34:20
+	android:exported
+		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:30:13-37
+	android:name
+		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:29:19-55
+intent-filter#action:name:com.example.timersapp.TIMER_EXPIRED
+ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:31:13-33:29
+action#com.example.timersapp.TIMER_EXPIRED
+ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:32:17-78
+	android:name
+		ADDED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml:32:25-75
 uses-sdk
 INJECTED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from /Users/nolan/repos/timers-app/app/src/main/AndroidManifest.xml

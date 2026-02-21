@@ -1,10 +1,15 @@
 package com.example.timersapp;
 
+import android.Manifest;
 import android.app.AlarmManager;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.Uri;
@@ -12,6 +17,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.provider.Settings;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
@@ -25,8 +31,11 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
+import androidx.core.app.NotificationCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.recyclerview.widget.SimpleItemAnimator;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.gson.Gson;
@@ -46,9 +55,18 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
 
     private static final String PREFS_NAME = "TimerPrefs";
     private static final String KEY_TIMERS = "saved_timers";
+    private static final String CHANNEL_ID = "timers_channel";
     
     private AlarmManager alarmManager;
-    
+    private NotificationManager notificationManager;
+
+    private final ActivityResultLauncher<String> requestPermissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+                if (!isGranted) {
+                    Toast.makeText(this, "Notification permission denied", Toast.LENGTH_SHORT).show();
+                }
+            });
+
     // For selecting sound in dialog
     private Uri tempSelectedSoundUri;
     private TextView tempSoundNameView;
@@ -77,13 +95,30 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        // Show over lockscreen
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true);
+            setTurnScreenOn(true);
+        } else {
+            getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
+                    | android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+                    | android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        }
+
         setContentView(R.layout.activity_main);
         
         alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-        checkExactAlarmPermission();
+        notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        createNotificationChannel();
+        requestNotificationPermission();
 
         RecyclerView recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        if (recyclerView.getItemAnimator() != null) {
+            recyclerView.getItemAnimator().setChangeDuration(0);
+            ((SimpleItemAnimator) recyclerView.getItemAnimator()).setSupportsChangeAnimations(false);
+        }
         
         adapter = new TimerAdapter(this);
         recyclerView.setAdapter(adapter);
@@ -113,6 +148,7 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
                     if (t.getId().equals(timerId)) {
                         t.setEndTime(0);
                         t.setFiring(true);
+                        cancelNotification(t);
                         playAlarmSound(t.getSoundUri());
                         adapter.notifyItemChanged(i);
                         saveTimers();
@@ -123,11 +159,65 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
         }
     }
     
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    CHANNEL_ID,
+                    "Ongoing Timers",
+                    NotificationManager.IMPORTANCE_HIGH
+            );
+            channel.setDescription("Shows active countdown timers and alarms");
+            channel.setShowBadge(true);
+            channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+            notificationManager.createNotificationChannel(channel);
+        }
+    }
+
+    private void updateNotification(TimerModel timer) {
+        if (!timer.isRunning()) {
+            cancelNotification(timer);
+            return;
+        }
+
+        Intent intent = new Intent(this, MainActivity.class);
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+                this, 
+                0, 
+                intent, 
+                PendingIntent.FLAG_IMMUTABLE
+        );
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentTitle(timer.getName())
+                .setContentText("Timer is running")
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setContentIntent(pendingIntent)
+                .setUsesChronometer(true)
+                .setChronometerCountDown(true)
+                .setWhen(System.currentTimeMillis() + (timer.getRemainingSeconds() * 1000));
+
+        notificationManager.notify(timer.getId().hashCode(), builder.build());
+    }
+
+    private void cancelNotification(TimerModel timer) {
+        notificationManager.cancel(timer.getId().hashCode());
+    }
+
     private void checkExactAlarmPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (!alarmManager.canScheduleExactAlarms()) {
                 Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
                 startActivity(intent);
+            }
+        }
+    }
+
+    private void requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
             }
         }
     }
@@ -345,6 +435,7 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
     @Override
     public void onDelete(TimerModel timer) {
         cancelAlarm(timer);
+        cancelNotification(timer);
         int pos = timers.indexOf(timer);
         if (pos != -1) {
             timers.remove(pos);
@@ -356,6 +447,7 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
     @Override
     public void onStopAlarm(TimerModel timer) {
         cancelAlarm(timer);
+        cancelNotification(timer);
         if (currentRingtone != null && currentRingtone.isPlaying()) {
             currentRingtone.stop();
         }
@@ -372,6 +464,7 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
     @Override
     public void onReset(TimerModel timer) {
         cancelAlarm(timer);
+        cancelNotification(timer);
         int index = timers.indexOf(timer);
         if (index != -1) {
             timer.setEndTime(0);
@@ -393,11 +486,13 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
             timer.setRemainingSeconds(remaining);
             timer.setEndTime(0);
             cancelAlarm(timer);
+            cancelNotification(timer);
         } else {
             // Start
             long endTime = System.currentTimeMillis() + (timer.getRemainingSeconds() * 1000);
             timer.setEndTime(endTime);
             scheduleAlarm(timer);
+            updateNotification(timer);
         }
         
         adapter.notifyItemChanged(index);
