@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Timers App</string>
+    <string name="app_name">Timers</string>
     <string name="add_timer">Add Timer</string>
     <string name="timer_name_hint">Timer Name</string>
     <string name="duration_hint_min">Minutes</string>
@@ -10,5 +10,13 @@
     <string name="pause">Pause</string>
     <string name="reset">Reset</string>
     <string name="delete">Delete</string>
+    <string name="stop_alarm">Stop Alarm</string>
     <string name="default_timer_text">00:00</string>
+    <string name="empty_state">No timers yet</string>
+    <string name="default_alarm_sound">Default alarm sound</string>
+    <string name="preview">Preview</string>
+    <string name="select">Select</string>
+    <string name="seconds_range_error">Use 0-59 seconds</string>
+    <string name="duration_required_error">Enter a duration</string>
+    <string name="duration_too_large_error">Duration is too large</string>
 </resources>

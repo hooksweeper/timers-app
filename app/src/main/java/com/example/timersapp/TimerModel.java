@@ -26,7 +26,7 @@ public class TimerModel {
     public long getRemainingSeconds() { 
         if (isRunning()) {
             long left = endTime - System.currentTimeMillis();
-            return Math.max(0, left / 1000);
+            return Math.max(0, (long) Math.ceil(left / 1000.0));
         }
         return remainingSeconds; 
     }
@@ -50,5 +50,11 @@ public class TimerModel {
     
     public void setSoundUri(String soundUri) {
         this.soundUri = soundUri;
+    }
+
+    public void reset() {
+        endTime = 0;
+        remainingSeconds = durationSeconds;
+        isFiring = false;
     }
 }

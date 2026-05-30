@@ -28,6 +28,7 @@ public class TimerAdapter extends RecyclerView.Adapter<TimerAdapter.TimerViewHol
 
     public TimerAdapter(OnTimerActionListener listener) {
         this.listener = listener;
+        setHasStableIds(true);
     }
 
     public void setTimers(List<TimerModel> newTimers) {
@@ -58,6 +59,11 @@ public class TimerAdapter extends RecyclerView.Adapter<TimerAdapter.TimerViewHol
     public int getItemCount() {
         return timers.size();
     }
+
+    @Override
+    public long getItemId(int position) {
+        return timers.get(position).getId().hashCode();
+    }
     
     public void cleanup() {
         // No-op
@@ -80,15 +86,16 @@ public class TimerAdapter extends RecyclerView.Adapter<TimerAdapter.TimerViewHol
 
         public void bind(TimerModel timer) {
             nameText.setText(timer.getName());
-            
-            long min = timer.getRemainingSeconds() / 60;
-            long sec = timer.getRemainingSeconds() % 60;
+
+            long remainingSeconds = timer.getRemainingSeconds();
+            long min = remainingSeconds / 60;
+            long sec = remainingSeconds % 60;
             timeText.setText(String.format(Locale.getDefault(), "%02d:%02d", min, sec));
 
             if (timer.isRunning()) {
-                startPauseButton.setText("Pause");
+                startPauseButton.setText(itemView.getContext().getString(R.string.pause));
             } else {
-                startPauseButton.setText("Start");
+                startPauseButton.setText(itemView.getContext().getString(R.string.start));
             }
             
             // Show stop button only if firing
@@ -103,7 +110,7 @@ public class TimerAdapter extends RecyclerView.Adapter<TimerAdapter.TimerViewHol
             }
             
             // Disable start if 0
-            startPauseButton.setEnabled(timer.getRemainingSeconds() > 0);
+            startPauseButton.setEnabled(remainingSeconds > 0);
 
             startPauseButton.setOnClickListener(v -> {
                 listener.onToggleTimer(timer);
