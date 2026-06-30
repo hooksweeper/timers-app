@@ -1,7 +1,6 @@
 package com.example.timersapp;
 
 import android.Manifest;
-import android.app.AlarmManager;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
@@ -14,10 +13,10 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.provider.Settings;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -26,12 +25,16 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.ContextCompat;
 import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.recyclerview.widget.SimpleItemAnimator;
 
+import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.textfield.TextInputEditText;
@@ -48,7 +51,6 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
     private final Handler tickerHandler = new Handler(Looper.getMainLooper());
     private Runnable tickerRunnable;
 
-    private AlarmManager alarmManager;
     private NotificationManager notificationManager;
 
     private final ActivityResultLauncher<String> requestPermissionLauncher =
@@ -97,13 +99,12 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
         notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         TimerAlarmService.ensureNotificationChannel(this);
 
         requestNotificationPermission();
-        checkExactAlarmPermission();
 
+        AppBarLayout appBar = findViewById(R.id.appBar);
         RecyclerView recyclerView = findViewById(R.id.recyclerView);
         emptyState = findViewById(R.id.emptyState);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -117,10 +118,51 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
 
         FloatingActionButton fab = findViewById(R.id.fabAddTimer);
         fab.setOnClickListener(v -> showAddTimerDialog());
+        applySystemBarInsets(appBar, recyclerView, fab);
 
         loadTimers();
         startGlobalTicker();
         handleIntent(getIntent());
+    }
+
+    private void applySystemBarInsets(
+            AppBarLayout appBar,
+            RecyclerView recyclerView,
+            FloatingActionButton fab
+    ) {
+        View root = findViewById(R.id.rootLayout);
+        int initialAppBarPaddingTop = appBar.getPaddingTop();
+        int initialRecyclerPaddingBottom = recyclerView.getPaddingBottom();
+        ViewGroup.MarginLayoutParams initialFabMargins =
+                (ViewGroup.MarginLayoutParams) fab.getLayoutParams();
+        int initialFabEndMargin = initialFabMargins.getMarginEnd();
+        int initialFabBottomMargin = initialFabMargins.bottomMargin;
+
+        ViewCompat.setOnApplyWindowInsetsListener(root, (view, windowInsets) -> {
+            Insets systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+
+            appBar.setPadding(
+                    appBar.getPaddingLeft(),
+                    initialAppBarPaddingTop + systemBars.top,
+                    appBar.getPaddingRight(),
+                    appBar.getPaddingBottom()
+            );
+            recyclerView.setPadding(
+                    recyclerView.getPaddingLeft(),
+                    recyclerView.getPaddingTop(),
+                    recyclerView.getPaddingRight(),
+                    initialRecyclerPaddingBottom + systemBars.bottom
+            );
+
+            ViewGroup.MarginLayoutParams fabMargins =
+                    (ViewGroup.MarginLayoutParams) fab.getLayoutParams();
+            fabMargins.setMarginEnd(initialFabEndMargin + systemBars.right);
+            fabMargins.bottomMargin = initialFabBottomMargin + systemBars.bottom;
+            fab.setLayoutParams(fabMargins);
+
+            return windowInsets;
+        });
+        ViewCompat.requestApplyInsets(root);
     }
 
     @SuppressWarnings("deprecation")
@@ -148,34 +190,13 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
     @Override
     protected void onResume() {
         super.onResume();
-        // If the user stopped alarms from the notification while the app was backgrounded,
-        // refresh from persisted state.
-        if (!TimerAlarmService.isRunning) {
-            timers = TimerStore.load(this);
-            adapter.setTimers(timers);
-            updateEmptyState();
-        }
+        loadTimers();
     }
 
     private void handleIntent(Intent intent) {
         if (intent == null) return;
         // Nothing special needed here — the service handles sound,
         // and loadTimers/onResume sync the firing state.
-    }
-
-    private void checkExactAlarmPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (!alarmManager.canScheduleExactAlarms()) {
-                new AlertDialog.Builder(this)
-                        .setTitle("Exact Alarm Permission")
-                        .setMessage("For precise timer accuracy, grant exact alarm permission in Settings.")
-                        .setPositiveButton("Open Settings", (d, w) -> {
-                            startActivity(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM));
-                        })
-                        .setNegativeButton("Not Now", null)
-                        .show();
-            }
-        }
     }
 
     private void requestNotificationPermission() {
@@ -200,7 +221,7 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
                             t.setEndTime(0);
                             t.setRemainingSeconds(0);
                             t.setFiring(true);
-                            startAlarmService(t);
+                            TimerAlarmService.startAlarm(MainActivity.this, t);
                             saveTimers();
                         }
                         adapter.notifyItemChanged(i);
@@ -212,71 +233,12 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
         tickerHandler.post(tickerRunnable);
     }
 
-    private void scheduleAlarm(TimerModel timer) {
-        if (alarmManager == null || !timer.isRunning()) return;
-
-        Intent intent = new Intent(this, TimerExpiredReceiver.class);
-        intent.setAction(TimerExpiredReceiver.ACTION_TIMER_EXPIRED);
-        intent.putExtra(TimerExpiredReceiver.EXTRA_TIMER_ID, timer.getId());
-        intent.putExtra(TimerExpiredReceiver.EXTRA_TIMER_NAME, timer.getName());
-        intent.putExtra(TimerExpiredReceiver.EXTRA_SOUND_URI, timer.getSoundUri());
-
-        PendingIntent pending = PendingIntent.getBroadcast(
-                this,
-                timer.getId().hashCode(),
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-        );
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (alarmManager.canScheduleExactAlarms()) {
-                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, timer.getEndTime(), pending);
-            } else {
-                alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, timer.getEndTime(), pending);
-            }
-        } else {
-            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, timer.getEndTime(), pending);
-        }
-    }
-
-    private void cancelAlarm(TimerModel timer) {
-        if (alarmManager == null) return;
-        Intent intent = new Intent(this, TimerExpiredReceiver.class);
-        intent.setAction(TimerExpiredReceiver.ACTION_TIMER_EXPIRED);
-        PendingIntent pending = PendingIntent.getBroadcast(
-                this,
-                timer.getId().hashCode(),
-                intent,
-                PendingIntent.FLAG_NO_CREATE | PendingIntent.FLAG_IMMUTABLE
-        );
-        if (pending != null) {
-            alarmManager.cancel(pending);
-            pending.cancel();
-        }
-    }
-
     private void cancelNotification(TimerModel timer) {
         notificationManager.cancel(timer.getId().hashCode());
     }
 
-    private void startAlarmService(TimerModel timer) {
-        Intent intent = new Intent(this, TimerAlarmService.class);
-        intent.setAction(TimerAlarmService.ACTION_START_ALARM);
-        intent.putExtra(TimerAlarmService.EXTRA_TIMER_ID, timer.getId());
-        intent.putExtra(TimerAlarmService.EXTRA_TIMER_NAME, timer.getName());
-        intent.putExtra(TimerAlarmService.EXTRA_SOUND_URI, timer.getSoundUri());
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(intent);
-        } else {
-            startService(intent);
-        }
-    }
-
     private void stopAlarmService(String timerId) {
-        Intent intent = new Intent(this, TimerAlarmService.class);
-        intent.setAction(TimerAlarmService.ACTION_STOP_ALARM);
-        intent.putExtra(TimerAlarmService.EXTRA_TIMER_ID, timerId);
-        startService(intent);
+        TimerAlarmService.stopAlarm(this, timerId);
     }
 
     private void showAddTimerDialog() {
@@ -372,20 +334,17 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
 
     private void loadTimers() {
         timers = TimerStore.load(this);
-        long now = System.currentTimeMillis();
-        boolean changed = false;
-        for (TimerModel t : timers) {
-            if (t.getEndTime() > 0 && t.getEndTime() <= now) {
-                t.setEndTime(0);
-                t.setRemainingSeconds(0);
-                t.setFiring(true);
-                changed = true;
-                if (!TimerAlarmService.firingIds.contains(t.getId())) {
-                    startAlarmService(t);
-                }
-            }
+        TimerStateReconciler.Result result =
+                TimerStateReconciler.reconcile(timers, System.currentTimeMillis());
+        if (result.isChanged()) {
+            saveTimers();
         }
-        if (changed) saveTimers();
+        for (TimerModel timer : result.getTimersToSchedule()) {
+            TimerScheduler.schedule(this, timer);
+        }
+        for (TimerModel timer : result.getTimersToAlert()) {
+            TimerAlarmService.startAlarm(this, timer);
+        }
         adapter.setTimers(timers);
         updateEmptyState();
     }
@@ -396,7 +355,7 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
 
     @Override
     public void onDelete(TimerModel timer) {
-        cancelAlarm(timer);
+        TimerScheduler.cancel(this, timer);
         cancelNotification(timer);
         if (timer.isFiring()) stopAlarmService(timer.getId());
         int pos = timers.indexOf(timer);
@@ -411,7 +370,7 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
     @Override
     public void onStopAlarm(TimerModel timer) {
         stopAlarmService(timer.getId());
-        cancelAlarm(timer);
+        TimerScheduler.cancel(this, timer);
         cancelNotification(timer);
         int index = timers.indexOf(timer);
         if (index != -1) {
@@ -425,7 +384,7 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
 
     @Override
     public void onReset(TimerModel timer) {
-        cancelAlarm(timer);
+        TimerScheduler.cancel(this, timer);
         cancelNotification(timer);
         int index = timers.indexOf(timer);
         if (index != -1) {
@@ -446,13 +405,13 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
             // Pause: snapshot remaining time, cancel alarm
             timer.setRemainingSeconds(timer.getRemainingSeconds());
             timer.setEndTime(0);
-            cancelAlarm(timer);
+            TimerScheduler.cancel(this, timer);
             cancelNotification(timer);
         } else {
             // Start: schedule alarm and show notification
             long endTime = System.currentTimeMillis() + (timer.getRemainingSeconds() * 1000L);
             timer.setEndTime(endTime);
-            scheduleAlarm(timer);
+            TimerScheduler.schedule(this, timer);
             updateRunningNotification(timer);
         }
 
@@ -465,7 +424,7 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
         PendingIntent pi = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE);
 
         androidx.core.app.NotificationCompat.Builder builder =
-                new NotificationCompat.Builder(this, TimerAlarmService.CHANNEL_ID)
+                new NotificationCompat.Builder(this, TimerAlarmService.RUNNING_CHANNEL_ID)
                         .setSmallIcon(android.R.drawable.ic_dialog_info)
                         .setContentTitle(timer.getName())
                         .setContentText("Timer running")

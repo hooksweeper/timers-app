@@ -8,11 +8,13 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 public class TimerAdapter extends RecyclerView.Adapter<TimerAdapter.TimerViewHolder> {
 
@@ -33,8 +35,10 @@ public class TimerAdapter extends RecyclerView.Adapter<TimerAdapter.TimerViewHol
 
     public void setTimers(List<TimerModel> newTimers) {
         if (this.timers != newTimers) {
+            DiffUtil.DiffResult diffResult =
+                    DiffUtil.calculateDiff(new TimerDiffCallback(this.timers, newTimers));
             this.timers = newTimers;
-            notifyDataSetChanged();
+            diffResult.dispatchUpdatesTo(this);
         }
     }
     
@@ -67,6 +71,46 @@ public class TimerAdapter extends RecyclerView.Adapter<TimerAdapter.TimerViewHol
     
     public void cleanup() {
         // No-op
+    }
+
+    private static class TimerDiffCallback extends DiffUtil.Callback {
+        private final List<TimerModel> oldTimers;
+        private final List<TimerModel> newTimers;
+
+        TimerDiffCallback(List<TimerModel> oldTimers, List<TimerModel> newTimers) {
+            this.oldTimers = oldTimers;
+            this.newTimers = newTimers;
+        }
+
+        @Override
+        public int getOldListSize() {
+            return oldTimers.size();
+        }
+
+        @Override
+        public int getNewListSize() {
+            return newTimers.size();
+        }
+
+        @Override
+        public boolean areItemsTheSame(int oldItemPosition, int newItemPosition) {
+            return Objects.equals(
+                    oldTimers.get(oldItemPosition).getId(),
+                    newTimers.get(newItemPosition).getId()
+            );
+        }
+
+        @Override
+        public boolean areContentsTheSame(int oldItemPosition, int newItemPosition) {
+            TimerModel oldTimer = oldTimers.get(oldItemPosition);
+            TimerModel newTimer = newTimers.get(newItemPosition);
+            return Objects.equals(oldTimer.getName(), newTimer.getName())
+                    && oldTimer.getDurationSeconds() == newTimer.getDurationSeconds()
+                    && oldTimer.getRemainingSeconds() == newTimer.getRemainingSeconds()
+                    && oldTimer.getEndTime() == newTimer.getEndTime()
+                    && oldTimer.isFiring() == newTimer.isFiring()
+                    && Objects.equals(oldTimer.getSoundUri(), newTimer.getSoundUri());
+        }
     }
 
     class TimerViewHolder extends RecyclerView.ViewHolder {

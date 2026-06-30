@@ -7,10 +7,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
-import android.media.AudioAttributes;
-import android.media.Ringtone;
-import android.media.RingtoneManager;
-import android.net.Uri;
+import android.content.pm.ServiceInfo;
 import android.os.Build;
 import android.os.IBinder;
 
@@ -29,19 +26,45 @@ public class TimerAlarmService extends Service {
     public static final String EXTRA_SOUND_URI = "sound_uri";
 
     static final String CHANNEL_ID = "timers_channel";
+    static final String RUNNING_CHANNEL_ID = "timers_running_channel";
     private static final int FOREGROUND_ID = 1001;
 
-    public static volatile boolean isRunning = false;
-    // Accessible from MainActivity for UI sync
-    static final Set<String> firingIds = Collections.synchronizedSet(new HashSet<>());
+    private static final Set<String> firingIds = Collections.synchronizedSet(new HashSet<>());
 
-    private Ringtone ringtone;
+    private final AlarmPlayer alarmPlayer = new AlarmPlayer();
     private NotificationManager notificationManager;
+
+    static void startAlarm(Context context, TimerModel timer) {
+        startAlarm(context, timer.getId(), timer.getName(), timer.getSoundUri());
+    }
+
+    static void startAlarm(Context context, String timerId, String timerName, String soundUri) {
+        Intent intent = new Intent(context, TimerAlarmService.class);
+        intent.setAction(TimerAlarmService.ACTION_START_ALARM);
+        intent.putExtra(TimerAlarmService.EXTRA_TIMER_ID, timerId);
+        intent.putExtra(TimerAlarmService.EXTRA_TIMER_NAME, timerName);
+        intent.putExtra(TimerAlarmService.EXTRA_SOUND_URI, soundUri);
+        startAlarmService(context, intent);
+    }
+
+    static void stopAlarm(Context context, String timerId) {
+        Intent intent = new Intent(context, TimerAlarmService.class);
+        intent.setAction(ACTION_STOP_ALARM);
+        intent.putExtra(EXTRA_TIMER_ID, timerId);
+        context.startService(intent);
+    }
+
+    private static void startAlarmService(Context context, Intent intent) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForegroundService(intent);
+        } else {
+            context.startService(intent);
+        }
+    }
 
     @Override
     public void onCreate() {
         super.onCreate();
-        isRunning = true;
         notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         ensureChannel();
     }
@@ -54,20 +77,27 @@ public class TimerAlarmService extends Service {
         if (ACTION_START_ALARM.equals(action)) {
             String timerId = intent.getStringExtra(EXTRA_TIMER_ID);
             String soundUriStr = intent.getStringExtra(EXTRA_SOUND_URI);
-            if (timerId != null) {
-                firingIds.add(timerId);
-                TimerStore.markFiring(this, timerId);
+            if (timerId == null || !TimerStore.markFiring(this, timerId)) {
+                if (firingIds.isEmpty()) {
+                    stopSelf(startId);
+                }
+                return START_NOT_STICKY;
             }
 
-            startForeground(FOREGROUND_ID, buildNotification());
-            // Only start playing if not already ringing
-            if (ringtone == null || !ringtone.isPlaying()) {
-                playSound(soundUriStr);
+            boolean isNewFiringTimer = false;
+            isNewFiringTimer = firingIds.add(timerId);
+
+            startForegroundForAlarm(buildNotification());
+            if (isNewFiringTimer || !alarmPlayer.isPlaying()) {
+                alarmPlayer.start(this, soundUriStr);
             }
 
         } else if (ACTION_STOP_ALARM.equals(action)) {
             String timerId = intent.getStringExtra(EXTRA_TIMER_ID);
-            if (timerId != null) firingIds.remove(timerId);
+            if (timerId != null) {
+                firingIds.remove(timerId);
+                TimerStore.resetFiringTimer(this, timerId);
+            }
             if (firingIds.isEmpty()) {
                 shutdown();
             } else {
@@ -103,6 +133,7 @@ public class TimerAlarmService extends Service {
                 .setContentText("Tap to open")
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setFullScreenIntent(openPending, true)
                 .setContentIntent(openPending)
                 .addAction(0, "Stop All", stopAllPending)
@@ -111,39 +142,21 @@ public class TimerAlarmService extends Service {
                 .build();
     }
 
-    private void playSound(String soundUriStr) {
-        stopSound();
-        try {
-            Uri uri;
-            if (soundUriStr != null) {
-                uri = Uri.parse(soundUriStr);
-            } else {
-                uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
-                if (uri == null) uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-            }
-            ringtone = RingtoneManager.getRingtone(getApplicationContext(), uri);
-            if (ringtone != null) {
-                ringtone.setAudioAttributes(new AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_ALARM)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build());
-                ringtone.play();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void stopSound() {
-        if (ringtone != null) {
-            if (ringtone.isPlaying()) ringtone.stop();
-            ringtone = null;
+    private void startForegroundForAlarm(Notification notification) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(
+                    FOREGROUND_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED
+            );
+        } else {
+            startForeground(FOREGROUND_ID, notification);
         }
     }
 
     @SuppressWarnings("deprecation")
     private void shutdown() {
-        stopSound();
+        alarmPlayer.stop();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             stopForeground(STOP_FOREGROUND_REMOVE);
         } else {
@@ -167,15 +180,23 @@ public class TimerAlarmService extends Service {
             ch.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
             ch.setBypassDnd(true);
             nm.createNotificationChannel(ch);
+
+            NotificationChannel runningChannel = new NotificationChannel(
+                    RUNNING_CHANNEL_ID,
+                    "Running timers",
+                    NotificationManager.IMPORTANCE_LOW
+            );
+            runningChannel.setDescription("Timers currently counting down");
+            runningChannel.setShowBadge(false);
+            nm.createNotificationChannel(runningChannel);
         }
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        isRunning = false;
         firingIds.clear();
-        stopSound();
+        alarmPlayer.stop();
     }
 
     @Override

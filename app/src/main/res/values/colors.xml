@@ -5,9 +5,7 @@
     <color name="blue_500">#2196F3</color>
     <color name="blue_700">#2563EB</color>
     <color name="blue_900">#1E3A8A</color>
-    <color name="blue_50">#EFF6FF</color>
     <color name="red_500">#F44336</color>
-    <color name="red_700">#D32F2F</color>
     <color name="surface">#F8FAFC</color>
     <color name="surface_container">#FFFFFF</color>
     <color name="on_surface">#1C1B1F</color>

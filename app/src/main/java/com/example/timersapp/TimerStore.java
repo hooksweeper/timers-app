@@ -40,21 +40,32 @@ final class TimerStore {
                 .apply();
     }
 
-    static void markFiring(Context context, String timerId) {
-        if (timerId == null) return;
+    static boolean markFiring(Context context, String timerId) {
+        if (timerId == null) return false;
 
         List<TimerModel> timers = load(context);
+        boolean found = false;
         boolean changed = false;
         for (TimerModel timer : timers) {
             if (timerId.equals(timer.getId())) {
-                timer.setEndTime(0);
-                timer.setRemainingSeconds(0);
-                timer.setFiring(true);
-                changed = true;
+                found = true;
+                if (timer.getEndTime() != 0) {
+                    timer.setEndTime(0);
+                    changed = true;
+                }
+                if (timer.getRemainingSeconds() != 0) {
+                    timer.setRemainingSeconds(0);
+                    changed = true;
+                }
+                if (!timer.isFiring()) {
+                    timer.setFiring(true);
+                    changed = true;
+                }
                 break;
             }
         }
         if (changed) save(context, timers);
+        return found;
     }
 
     static void resetFiringTimers(Context context) {
@@ -64,6 +75,21 @@ final class TimerStore {
             if (timer.isFiring()) {
                 timer.reset();
                 changed = true;
+            }
+        }
+        if (changed) save(context, timers);
+    }
+
+    static void resetFiringTimer(Context context, String timerId) {
+        if (timerId == null) return;
+
+        List<TimerModel> timers = load(context);
+        boolean changed = false;
+        for (TimerModel timer : timers) {
+            if (timerId.equals(timer.getId()) && timer.isFiring()) {
+                timer.reset();
+                changed = true;
+                break;
             }
         }
         if (changed) save(context, timers);

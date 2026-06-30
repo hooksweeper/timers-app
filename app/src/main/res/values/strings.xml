@@ -16,7 +16,7 @@
     <string name="default_alarm_sound">Default alarm sound</string>
     <string name="preview">Preview</string>
     <string name="select">Select</string>
-    <string name="seconds_range_error">Use 0-59 seconds</string>
+    <string name="seconds_range_error">Use 0 to 59 seconds</string>
     <string name="duration_required_error">Enter a duration</string>
     <string name="duration_too_large_error">Duration is too large</string>
 </resources>
