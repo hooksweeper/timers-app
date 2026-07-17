@@ -40,6 +40,13 @@ final class TimerStore {
                 .apply();
     }
 
+    static boolean saveImmediately(Context context, List<TimerModel> timers) {
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .putString(KEY_TIMERS, GSON.toJson(timers))
+                .commit();
+    }
+
     static boolean markFiring(Context context, String timerId) {
         if (timerId == null) return false;
 
@@ -64,7 +71,7 @@ final class TimerStore {
                 break;
             }
         }
-        if (changed) save(context, timers);
+        if (changed) saveImmediately(context, timers);
         return found;
     }
 
@@ -77,7 +84,7 @@ final class TimerStore {
                 changed = true;
             }
         }
-        if (changed) save(context, timers);
+        if (changed) saveImmediately(context, timers);
     }
 
     static void resetFiringTimer(Context context, String timerId) {
@@ -92,6 +99,6 @@ final class TimerStore {
                 break;
             }
         }
-        if (changed) save(context, timers);
+        if (changed) saveImmediately(context, timers);
     }
 }

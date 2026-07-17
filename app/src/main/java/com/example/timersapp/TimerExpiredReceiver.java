@@ -13,11 +13,15 @@ public class TimerExpiredReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         if (!ACTION_TIMER_EXPIRED.equals(intent.getAction())) return;
 
-        TimerAlarmService.startAlarm(
+        AlarmWakeLock.acquire(context);
+        boolean started = TimerAlarmService.startAlarm(
                 context,
                 intent.getStringExtra(EXTRA_TIMER_ID),
                 intent.getStringExtra(EXTRA_TIMER_NAME),
                 intent.getStringExtra(EXTRA_SOUND_URI)
         );
+        if (!started) {
+            AlarmWakeLock.release();
+        }
     }
 }

@@ -10,6 +10,7 @@ import android.content.Intent;
 import android.content.pm.ServiceInfo;
 import android.os.Build;
 import android.os.IBinder;
+import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
 
@@ -18,6 +19,8 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class TimerAlarmService extends Service {
+    private static final String TAG = "TimerAlarmService";
+
     public static final String ACTION_START_ALARM = "com.example.timersapp.START_ALARM";
     public static final String ACTION_STOP_ALARM = "com.example.timersapp.STOP_ALARM";
     public static final String ACTION_STOP_ALL = "com.example.timersapp.STOP_ALL";
@@ -34,17 +37,17 @@ public class TimerAlarmService extends Service {
     private final AlarmPlayer alarmPlayer = new AlarmPlayer();
     private NotificationManager notificationManager;
 
-    static void startAlarm(Context context, TimerModel timer) {
-        startAlarm(context, timer.getId(), timer.getName(), timer.getSoundUri());
+    static boolean startAlarm(Context context, TimerModel timer) {
+        return startAlarm(context, timer.getId(), timer.getName(), timer.getSoundUri());
     }
 
-    static void startAlarm(Context context, String timerId, String timerName, String soundUri) {
+    static boolean startAlarm(Context context, String timerId, String timerName, String soundUri) {
         Intent intent = new Intent(context, TimerAlarmService.class);
         intent.setAction(TimerAlarmService.ACTION_START_ALARM);
         intent.putExtra(TimerAlarmService.EXTRA_TIMER_ID, timerId);
         intent.putExtra(TimerAlarmService.EXTRA_TIMER_NAME, timerName);
         intent.putExtra(TimerAlarmService.EXTRA_SOUND_URI, soundUri);
-        startAlarmService(context, intent);
+        return startAlarmService(context, intent);
     }
 
     static void stopAlarm(Context context, String timerId) {
@@ -54,11 +57,17 @@ public class TimerAlarmService extends Service {
         context.startService(intent);
     }
 
-    private static void startAlarmService(Context context, Intent intent) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            context.startForegroundService(intent);
-        } else {
-            context.startService(intent);
+    private static boolean startAlarmService(Context context, Intent intent) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent);
+            } else {
+                context.startService(intent);
+            }
+            return true;
+        } catch (RuntimeException e) {
+            Log.e(TAG, "Unable to start timer alarm service", e);
+            return false;
         }
     }
 
@@ -75,21 +84,33 @@ public class TimerAlarmService extends Service {
 
         String action = intent.getAction();
         if (ACTION_START_ALARM.equals(action)) {
-            String timerId = intent.getStringExtra(EXTRA_TIMER_ID);
-            String soundUriStr = intent.getStringExtra(EXTRA_SOUND_URI);
-            if (timerId == null || !TimerStore.markFiring(this, timerId)) {
+            String timerId = null;
+            try {
+                timerId = intent.getStringExtra(EXTRA_TIMER_ID);
+                String soundUriStr = intent.getStringExtra(EXTRA_SOUND_URI);
+                if (timerId == null || !TimerStore.markFiring(this, timerId)) {
+                    if (firingIds.isEmpty()) {
+                        stopSelf(startId);
+                    }
+                    return START_NOT_STICKY;
+                }
+
+                boolean isNewFiringTimer = firingIds.add(timerId);
+
+                startForegroundForAlarm(buildNotification());
+                if (isNewFiringTimer || !alarmPlayer.isPlaying()) {
+                    alarmPlayer.start(this, soundUriStr);
+                }
+            } catch (RuntimeException e) {
+                Log.e(TAG, "Unable to promote or play timer alarm", e);
+                if (timerId != null) {
+                    firingIds.remove(timerId);
+                }
                 if (firingIds.isEmpty()) {
                     stopSelf(startId);
                 }
-                return START_NOT_STICKY;
-            }
-
-            boolean isNewFiringTimer = false;
-            isNewFiringTimer = firingIds.add(timerId);
-
-            startForegroundForAlarm(buildNotification());
-            if (isNewFiringTimer || !alarmPlayer.isPlaying()) {
-                alarmPlayer.start(this, soundUriStr);
+            } finally {
+                AlarmWakeLock.release();
             }
 
         } else if (ACTION_STOP_ALARM.equals(action)) {
@@ -143,11 +164,11 @@ public class TimerAlarmService extends Service {
     }
 
     private void startForegroundForAlarm(Notification notification) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
                     FOREGROUND_ID,
                     notification,
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
             );
         } else {
             startForeground(FOREGROUND_ID, notification);

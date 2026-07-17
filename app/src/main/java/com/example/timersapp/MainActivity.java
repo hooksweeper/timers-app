@@ -353,6 +353,10 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
         TimerStore.save(this, timers);
     }
 
+    private boolean saveTimersImmediately() {
+        return TimerStore.saveImmediately(this, timers);
+    }
+
     @Override
     public void onDelete(TimerModel timer) {
         TimerScheduler.cancel(this, timer);
@@ -407,16 +411,32 @@ public class MainActivity extends AppCompatActivity implements TimerAdapter.OnTi
             timer.setEndTime(0);
             TimerScheduler.cancel(this, timer);
             cancelNotification(timer);
+            saveTimersImmediately();
         } else {
             // Start: schedule alarm and show notification
-            long endTime = System.currentTimeMillis() + (timer.getRemainingSeconds() * 1000L);
+            long remainingSeconds = timer.getRemainingSeconds();
+            if (remainingSeconds <= 0) return;
+
+            long endTime = System.currentTimeMillis() + (remainingSeconds * 1000L);
             timer.setEndTime(endTime);
-            TimerScheduler.schedule(this, timer);
+            timer.setFiring(false);
+            if (!saveTimersImmediately()) {
+                timer.setEndTime(0);
+                Toast.makeText(this, "Couldn't save timer", Toast.LENGTH_SHORT).show();
+                adapter.notifyItemChanged(index);
+                return;
+            }
+            if (!TimerScheduler.schedule(this, timer)) {
+                timer.setEndTime(0);
+                saveTimersImmediately();
+                Toast.makeText(this, "Couldn't start timer alarm", Toast.LENGTH_SHORT).show();
+                adapter.notifyItemChanged(index);
+                return;
+            }
             updateRunningNotification(timer);
         }
 
         adapter.notifyItemChanged(index);
-        saveTimers();
     }
 
     private void updateRunningNotification(TimerModel timer) {
